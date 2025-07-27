@@ -1,4 +1,1 @@
-sudo apt-get clean
-sudo apt-get autoremove
-sudo apt-get -f install
-sudo dpkg --configure -a
+sudo apt install libsnappy-dev libssl-dev pkg-config git
