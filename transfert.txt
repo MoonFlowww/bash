@@ -1,8 +1,4 @@
-sudo tee /etc/apt/sources.list.d/ubuntu.sources <<EOF
-Types: deb
-URIs: http://archive.ubuntu.com/ubuntu
-Suites: plucky
-Components: main universe restricted multiverse
-Architectures: amd64
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-EOF
+sudo apt-get clean
+sudo apt-get autoremove
+sudo apt-get -f install
+sudo dpkg --configure -a
