@@ -1,1 +1,1 @@
-sudo apt install libsnappy-dev libssl-dev pkg-config git
+cd /ssd/libs && wget https://packages.apache.org/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
