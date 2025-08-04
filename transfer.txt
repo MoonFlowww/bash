@@ -1,4 +1,4 @@
-#!/bin/bash
+
 #Custom functions
 bold=$(tput bold)
 orange=$"\033[38;5;208m"
