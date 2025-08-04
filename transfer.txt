@@ -1,4 +1,11 @@
 samba() {
+    #Custom functions
+    bold=$(tput bold)
+    orange=$"\033[38;5;208m"
+    green=$"\033[38;5;34m"
+    reset=$(tput sgr0)
+    arrow=$"\u2192"
+
     if [[ $EUID -ne 0 ]]; then
         echo "You must run this function as admin."
         return 1
