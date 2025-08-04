@@ -41,7 +41,8 @@ case "${1-}" in
   "" )
     current_state=$(
       awk -v s="$SHARE" '
-        $0 ~ "^\\[" { in = (index($0, "[" s "]") == 1); next }
+        $0 ~ ("^\\[" s "\\]") { in=1; next }
+        in && $0 ~ /^\[/ { in=0 }
         in && /^[ \t]*read[ \t]*only[ \t]*=/ {
           val = $0
           sub(/.*=/, "", val)
