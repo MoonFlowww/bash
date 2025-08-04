@@ -16,13 +16,7 @@ toggle() {
   # Try to replace within the section
   sed -i "/^\[$SHARE\]/,/^\[/{s/^[[:space:]]*read only[[:space:]]*=.*/   read only = ${val}/}" "$CONF_PATH"
   # If the key wasn't present, insert it right after the section header
-  if ! awk -v s="$SHARE" '
-      /^\[/ && $0 ~ "\\[" s "\\]" { in=1; next }
-      in && /^\[/ { in=0 }
-      in && /^[ \t]*read[ \t]*only[ \t]*=/ { found=1 }
-      END { exit !found }
-    ' "$CONF_PATH"
-  then
+  if ! grep -A20 "^\[$SHARE\]" "$CONF_PATH" | grep -q "^[[:space:]]*read only[[:space:]]*="; then
     sed -i "/^\[$SHARE\]/a\   read only = ${val}" "$CONF_PATH"
   fi
 }
@@ -39,19 +33,9 @@ case "${1-}" in
     needs_restart=true
     ;;
   "" )
-    current_state=$(
-      awk -v s="$SHARE" '
-        /^\[/ && $0 ~ "\\[" s "\\]" { in=1; next }
-        in && /^\[/ { in=0 }
-        in && /^[ \t]*read[ \t]*only[ \t]*=/ {
-          val = $0
-          sub(/.*=/, "", val)
-          gsub(/[ \t]/, "", val)
-          print tolower(val)
-          exit
-        }
-      ' "$CONF_PATH"
-    )
+    # Extract the section and find read only value
+    current_state=$(sed -n "/^\[$SHARE\]/,/^\[/{/^[[:space:]]*read only[[:space:]]*=/p}" "$CONF_PATH" | sed 's/.*=[[:space:]]*//' | tr -d ' ')
+    
     if [[ "$current_state" == "yes" ]]; then
       printf "    %s%s%s The share %s'%s'%s is currently %sRead-Only%s\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$orange" "$reset"
     else
