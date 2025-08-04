@@ -7,7 +7,6 @@ orange=$'\033[38;5;208m'
 green=$'\033[38;5;34m'
 arrow=$'\u2192'
 
-# must be root (no subshell "return"; use exit)
 if (( EUID != 0 )); then
   printf "You must run this script as admin.\n"
   exit 1
@@ -18,40 +17,60 @@ CONF_PATH="/etc/samba/smb.conf"
 
 toggle() {
   local val="$1" # yes|no
-  # Edit within the [parquet_files] section up to the next section header
+  # Try to replace within the section
   sed -i "/^\[$SHARE\]/,/^\[/{s/^[[:space:]]*read only[[:space:]]*=.*/   read only = ${val}/}" "$CONF_PATH"
+  # If the key wasn't present, insert it right after the section header
+  if ! awk -v s="$SHARE" '
+      $0 ~ "^\\[" s "\\]" { in=1; next }
+      in && $0 ~ "^\\[" { in=0 }
+      in && $0 ~ /^[ \t]*read[ \t]*only[ \t]*=/ { found=1 }
+      END { exit !found }
+    ' "$CONF_PATH"
+  then
+    sed -i "/^\[$SHARE\]/a\   read only = ${val}" "$CONF_PATH"
+  fi
 }
+
+needs_restart=false
 
 case "${1-}" in
   0)
     toggle yes
     printf "    %s The share %s'%s'%s is now %sread-only%s.\n" "$arrow" "$bold" "$SHARE" "$reset" "$orange" "$reset"
+    needs_restart=true
     ;;
   1)
     toggle no
     printf "    %s The share %s'%s'%s is now %swritable%s.\n" "$arrow" "$bold" "$SHARE" "$reset" "$green" "$reset"
+    needs_restart=true
     ;;
   "" )
-    # Report current state
     current_state=$(
       awk -v s="$SHARE" '
-        $0 ~ "^[[:space:]]*\\[" s "\\]" { in=1; next }
-        in && $0 ~ /^[[:space:]]*\[/ { in=0 }
-        in && $0 ~ /^[[:space:]]*read only[[:space:]]*=/ {
-          sub(/.*=/,""); gsub(/[[:space:]]/,""); print; exit
-        }' "$CONF_PATH"
+        /^\[/ { in = (index($0, "[" s "]") == 1); next }
+        in && /^[ \t]*read[ \t]*only[ \t]*=/ {
+          val = $0
+          sub(/.*=/, "", val)
+          gsub(/[ \t]/, "", val)
+          print tolower(val)
+          exit
+        }
+      ' "$CONF_PATH"
     )
-    if [[ "${current_state,,}" == "yes" ]]; then
+
+    if [[ "$current_state" == "yes" ]]; then
       printf "    %s%s%s The share %s'%s'%s is currently %sRead-Only%s\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$orange" "$reset"
     else
       printf "    %s%s%s The share %s'%s'%s is currently %sWritable%s\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$green" "$reset"
     fi
-    printf "Unknown parameter. [0: Read-Only; 1: Writable]\n"
+    printf "Usage: %s 0|1   (0=read-only, 1=writable)\n" "$(basename "$0")"
     ;;
   * )
-    printf "Unknown parameter. [0: Read-Only; 1: Writable]\n"
+    printf "Usage: %s 0|1   (0=read-only, 1=writable)\n" "$(basename "$0")"
     exit 2
     ;;
 esac
 
-systemctl restart smbd
+if $needs_restart; then
+  systemctl restart smbd
+fi
