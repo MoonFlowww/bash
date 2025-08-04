@@ -1,34 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
 
-#Custom functions
 bold=$(tput bold)
-orange=$"\033[38;5;208m"
-green=$"\033[38;5;34m"
 reset=$(tput sgr0)
-arrow=$"\u2192"
+orange=$'\033[38;5;208m'
+green=$'\033[38;5;34m'
+arrow=$'\u2192'
 
-if [[ $EUID -ne 0 ]]; then
-    echo "You must run this function as admin."
-    return 1
+# must be root (no subshell "return"; use exit)
+if (( EUID != 0 )); then
+  printf "You must run this script as admin.\n"
+  exit 1
 fi
 
 SHARE="parquet_files"
 CONF_PATH="/etc/samba/smb.conf"
 
-if [ "$1" == "0" ]; then
-    sudo sed -i "/\[$SHARE\)/,/^$/s/^read only = .*/read only = yes/" $CONF_PATH
-    echo -e "    ${arrow} The share ${bold}'$SHARE'${reset} is now ${orange}read-only${reset}."
-elif [ "$1" == "1" ]; then
-    sudo sed -i "/\[$SHARE\]/,/^$/s/^read only = .*/read only = no/" $CONF_PATH
-    echo -e "    ${arrow} The share ${bold}'$SHARE'${reset} is now ${green}writable${reset}."
-elif [ -z "$1" ]; then
-    echo "Unknown parameter. [0: Read-Only; 1: Writable]"
-    current_state=$(grep -A 1 "^\[$SHARE\]" $CONF_PATH | grep -E "^read only" | awk '{print $3}')
-    if [ "$current_state" == "yes" ]; then
-        echo -e "    ${bold}${arrow}${reset} The share ${bold}'$SHARE'${reset} is currently ${orange}Read-Only${reset}"
-    else
-        echo -e "    ${bold}${arrow}${reset} The share ${bold}'$SHARE'${reset} is currently ${green}Writable${reset}"
-    fi
-    return 0
-fi
-sudo systemctl restart smbd
+toggle() {
+  local val="$1" # yes|no
+  # Edit within the [parquet_files] section up to the next section header
+  sed -i "/^\[$SHARE\]/,/^\[/{s/^[[:space:]]*read only[[:space:]]*=.*/   read only = ${val}/}" "$CONF_PATH"
+}
 
+case "${1-}" in
+  0)
+    toggle yes
+    printf "    %s The share %s'%s'%s is now %sread-only%s.\n" "$arrow" "$bold" "$SHARE" "$reset" "$orange" "$reset"
+    ;;
+  1)
+    toggle no
+    printf "    %s The share %s'%s'%s is now %swritable%s.\n" "$arrow" "$bold" "$SHARE" "$reset" "$green" "$reset"
+    ;;
+  "" )
+    # Report current state
+    current_state=$(
+      awk -v s="$SHARE" '
+        $0 ~ "^[[:space:]]*\\[" s "\\]" { in=1; next }
+        in && $0 ~ /^[[:space:]]*\[/ { in=0 }
+        in && $0 ~ /^[[:space:]]*read only[[:space:]]*=/ {
+          sub(/.*=/,""); gsub(/[[:space:]]/,""); print; exit
+        }' "$CONF_PATH"
+    )
+    if [[ "${current_state,,}" == "yes" ]]; then
+      printf "    %s%s%s The share %s'%s'%s is currently %sRead-Only%s\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$orange" "$reset"
+    else
+      printf "    %s%s%s The share %s'%s'%s is currently %sWritable%s\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$green" "$reset"
+    fi
+    printf "Unknown parameter. [0: Read-Only; 1: Writable]\n"
+    ;;
+  * )
+    printf "Unknown parameter. [0: Read-Only; 1: Writable]\n"
+    exit 2
+    ;;
+esac
+
+systemctl restart smbd
