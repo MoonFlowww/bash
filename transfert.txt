@@ -1,1 +1,27 @@
-sudo bash -c 'echo -e "\nsamba() {\n    if [[ \$EUID -ne 0 ]]; then\n        echo \"You must run this function as admin.\"\n        return 1\n    fi\n\n    SHARE=\"parquet_files\"\n    CONF_PATH=\"/etc/samba/smb.conf\"\n\n    if [ \"\$1\" == \"0\" ]; then\n        sudo sed -i \"/\[\$SHARE\)/,/^$/s/^read only = .*/read only = yes/\" \$CONF_PATH\n        echo -e \"    \${arrow} The share \${bold}\'\$SHARE\'\${reset} is now \${orange}read-only\${reset}.\"\n\n    elif [ \"\$1\" == \"1\" ]; then\n        sudo sed -i \"/\[\$SHARE\]/,/^$/s/^read only = .*/read only = no/\" \$CONF_PATH\n        echo -e \"    \${arrow} The share \${bold}\'\$SHARE\'\${reset} is now \${green}writable\${reset}.\"\n\n    elif [ -z \"\$1\" ]; then\n        echo \"Unknown parameter. [0: Read-Only; 1: Writable]\"\n        current_state=\$(grep -A 1 \"^\[\$SHARE\]\" \$CONF_PATH | grep -E \"^read only\" | awk \'{print \$3}\')\n        if [ \"\$current_state\" == \"yes\" ]; then\n            echo -e \"    \${bold}\${arrow}\${reset} The share \${bold}\'\$SHARE\'\${reset} is currently \${orange}Read-Only\${reset}\"\n        else\n            echo -e \"    \${bold}\${arrow}\${reset} The share \${bold}\'\$SHARE\'\${reset} is currently \${green}Writable\${reset}\"\n        fi\n        return 0\n    fi\n}" >> /etc/bash.bashrc'
+samba() {
+    if [[ $EUID -ne 0 ]]; then
+        echo "You must run this function as admin."
+        return 1
+    fi
+
+    SHARE="parquet_files"
+    CONF_PATH="/etc/samba/smb.conf"
+
+    if [ "$1" == "0" ]; then
+        sudo sed -i "/\[$SHARE\)/,/^$/s/^read only = .*/read only = yes/" $CONF_PATH
+        echo -e "    ${arrow} The share ${bold}'$SHARE'${reset} is now ${orange}read-only${reset}."
+    elif [ "$1" == "1" ]; then
+        sudo sed -i "/\[$SHARE\]/,/^$/s/^read only = .*/read only = no/" $CONF_PATH
+        echo -e "    ${arrow} The share ${bold}'$SHARE'${reset} is now ${green}writable${reset}."
+    elif [ -z "$1" ]; then
+        echo "Unknown parameter. [0: Read-Only; 1: Writable]"
+        current_state=$(grep -A 1 "^\[$SHARE\]" $CONF_PATH | grep -E "^read only" | awk '{print $3}')
+        if [ "$current_state" == "yes" ]; then
+            echo -e "    ${bold}${arrow}${reset} The share ${bold}'$SHARE'${reset} is currently ${orange}Read-Only${reset}"
+        else
+            echo -e "    ${bold}${arrow}${reset} The share ${bold}'$SHARE'${reset} is currently ${green}Writable${reset}"
+        fi
+        return 0
+    fi
+    sudo systemctl restart smbd
+}
