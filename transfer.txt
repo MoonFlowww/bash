@@ -13,12 +13,12 @@ SHARE="parquet_files"
 CONF_PATH="/etc/samba/smb.conf"
 toggle() {
   local val="$1" # yes|no
-  # Try to replace within the section
-  sed -i "/^\[$SHARE\]/,/^\[/{s/^[[:space:]]*read only[[:space:]]*=.*/   read only = ${val}/}" "$CONF_PATH"
-  # If the key wasn't present, insert it right after the section header
-  if ! grep -A20 "^\[$SHARE\]" "$CONF_PATH" | grep -q "^[[:space:]]*read only[[:space:]]*="; then
-    sed -i "/^\[$SHARE\]/a\   read only = ${val}" "$CONF_PATH"
-  fi
+  
+  # First, remove ALL existing "read only" lines within the section
+  sed -i "/^\[$SHARE\]/,/^\[/{/^[[:space:]]*read only[[:space:]]*=/d}" "$CONF_PATH"
+  
+  # Then add the new value right after the section header
+  sed -i "/^\[$SHARE\]/a\   read only = ${val}" "$CONF_PATH"
 }
 needs_restart=false
 case "${1-}" in
