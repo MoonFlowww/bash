@@ -36,7 +36,7 @@ case "${1-}" in
     # Extract the section and find read only value
     current_state=$(sed -n "/^\[$SHARE\]/,/^\[/{/^[[:space:]]*read only[[:space:]]*=/p}" "$CONF_PATH" | sed 's/.*=[[:space:]]*//' | tr -d ' ')
     
-    printf "Usage: %s %s0%s=%s%sread-only%s, %s1%s=%s%swritable%s\n" "$(basename "$0")" "$orange" "$reset" "$orange" "$orange" "$reset" "$green" "$reset" "$green" "$green" "$reset"
+    printf "%sUsage:%s %s %s%s0%s=%s%sread-only%s, %s%s1%s=%s%swritable%s\n" "$bold" "$reset" "$(basename "$0")" "$bold" "$orange" "$reset" "$bold" "$orange" "$reset" "$bold" "$green" "$reset" "$bold" "$green" "$reset"
     
     if [[ "$current_state" == "yes" ]]; then
       printf "    %s%s%s The share %s'%s'%s is currently %sRead-Only%s\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$orange" "$reset"
@@ -45,7 +45,7 @@ case "${1-}" in
     fi
     ;;
   * )
-    printf "Usage: %s 0|1   (0=read-only, 1=writable)\n" "$(basename "$0")"
+    printf "%sUsage:%s %s %s%s0%s=%s%sread-only%s, %s%s1%s=%s%swritable%s\n" "$bold" "$reset" "$(basename "$0")" "$bold" "$orange" "$reset" "$bold" "$orange" "$reset" "$bold" "$green" "$reset" "$bold" "$green" "$reset"
     exit 2
     ;;
 esac
