@@ -1,20 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 bold=$(tput bold)
 reset=$(tput sgr0)
 orange=$'\033[38;5;208m'
 green=$'\033[38;5;34m'
 arrow=$'\u2192'
-
 if (( EUID != 0 )); then
   printf "You must run this script as admin.\n"
   exit 1
 fi
-
 SHARE="parquet_files"
 CONF_PATH="/etc/samba/smb.conf"
-
 toggle() {
   local val="$1" # yes|no
   # Try to replace within the section
@@ -30,18 +26,16 @@ toggle() {
     sed -i "/^\[$SHARE\]/a\   read only = ${val}" "$CONF_PATH"
   fi
 }
-
 needs_restart=false
-
 case "${1-}" in
   0)
     toggle yes
-    printf "    %s The share %s'%s'%s is now %sread-only%s.\n" "$arrow" "$bold" "$SHARE" "$reset" "$orange" "$reset"
+    printf "    %s%s%s The share %s'%s'%s is now %sread-only%s.\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$orange" "$reset"
     needs_restart=true
     ;;
   1)
     toggle no
-    printf "    %s The share %s'%s'%s is now %swritable%s.\n" "$arrow" "$bold" "$SHARE" "$reset" "$green" "$reset"
+    printf "    %s%s%s The share %s'%s'%s is now %swritable%s.\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$green" "$reset"
     needs_restart=true
     ;;
   "" )
@@ -57,7 +51,6 @@ case "${1-}" in
         }
       ' "$CONF_PATH"
     )
-
     if [[ "$current_state" == "yes" ]]; then
       printf "    %s%s%s The share %s'%s'%s is currently %sRead-Only%s\n" "$bold" "$arrow" "$reset" "$bold" "$SHARE" "$reset" "$orange" "$reset"
     else
@@ -70,7 +63,6 @@ case "${1-}" in
     exit 2
     ;;
 esac
-
 if $needs_restart; then
   systemctl restart smbd
 fi
