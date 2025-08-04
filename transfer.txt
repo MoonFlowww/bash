@@ -50,5 +50,14 @@ case "${1-}" in
     ;;
 esac
 if $needs_restart; then
-  systemctl restart smbd
+  # Restart all Samba services
+  systemctl restart smbd nmbd
+  
+  # Force Samba to reload the configuration
+  smbcontrol all reload-config
+  
+  # Clear any cached connections for this share
+  smbcontrol all close-share "$SHARE"
+  
+  printf "    %sServices restarted and configuration reloaded%s\n" "$green" "$reset"
 fi
